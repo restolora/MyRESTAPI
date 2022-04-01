@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 router.get('/', (req, res, next) => {
-	res.send('API is UP');
+	res.send('API is UP!');
 });
 
 module.exports = router;
