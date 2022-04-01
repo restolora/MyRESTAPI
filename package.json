@@ -1,7 +1,7 @@
 {
 	"name": "backend",
 	"version": "1.0.0",
-	"description": "",
+	"description": "My node js api using node js and mongodb",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
@@ -25,5 +25,8 @@
 		"socket-io": "^1.0.0",
 		"socket.io": "^4.4.1",
 		"socket.io-adapter-mongo": "^2.0.5"
+	},
+	"engines": {
+		"node": "v14.15.1"
 	}
 }
