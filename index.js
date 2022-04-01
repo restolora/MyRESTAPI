@@ -20,6 +20,7 @@ app.use(logger('dev'));
 app.use(express.urlencoded({ extended: true, parameterLimit: 10000, limit: 1024 * 1024 * 50 }));
 
 // routes
+app.use('/', require('./routes/index'));
 const usersRoutes = require('./routes/Users');
 app.use('/users', usersRoutes);
 const api = require('./routes/api');
