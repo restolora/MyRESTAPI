@@ -35,22 +35,22 @@ router.post('/e/:EntityId', async (req, res, next) => {
 router.get('/e/:EntityId', async (req, res) => {
 	const { EntityId } = req.params;
 	const schemas = Schemas[EntityId];
-	res.status(200).send({ data: EntityId });
-	// try {
-	// 	const data = await new Promise((resolve, reject) => {
-	// 		M(C(Database), EntityId, schemas).find((err, data) => {
-	// 			if (err) return reject(err);
-	// 			resolve(data);
-	// 		});
-	// 	});
-	// 	res.status(200).send({ data });
-	// } catch (error) {
-	// 	console.log('error', error);
-	// 	res.status(412).send({
-	// 		status: error,
-	// 		message: 'Fetching data error'
-	// 	});
-	// }
+	// res.status(200).send({ data: EntityId });
+	try {
+		const data = await new Promise((resolve, reject) => {
+			M(C(Database), EntityId, schemas).find((err, data) => {
+				if (err) return reject(err);
+				resolve(data);
+			});
+		});
+		res.status(200).send({ data });
+	} catch (error) {
+		console.log('error', error);
+		res.status(412).send({
+			status: error,
+			message: 'Fetching data error'
+		});
+	}
 });
 
 // getData by id
