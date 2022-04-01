@@ -4,6 +4,10 @@ const Database = 'portpolio';
 const { C, M } = require('../models/database');
 const { Schemas } = require('../models/schemas');
 
+router.get('/', (req, res, next) => {
+	res.send('API');
+});
+
 // insert
 router.post('/e/:EntityId', async (req, res, next) => {
 	const { EntityId } = req.params;
