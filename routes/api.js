@@ -32,7 +32,7 @@ router.post('/e/:EntityId', async (req, res, next) => {
 });
 
 // retrieve
-router.get('/e/:EntityId', async (req, res) => {
+router.get('/:EntityId', async (req, res) => {
 	const { EntityId } = req.params;
 	const schemas = Schemas[EntityId];
 	// res.status(200).send({ data: EntityId });
