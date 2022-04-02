@@ -4,6 +4,14 @@ const Database = 'portpolio';
 const { C, M } = require('../models/database');
 const { Schemas } = require('../models/schemas');
 
+router.use('/*', async (req, res, next) => {
+	let token = req.headers.authorization || req.query.token;
+	if (!token) return res.status(401).send('No token provided');
+	req.query.newToken = newToken;
+	res.set('Authorization', newToken);
+	next();
+});
+
 router.get('/', (req, res, next) => {
 	res.send('API');
 });
