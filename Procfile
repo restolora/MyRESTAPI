@@ -1,0 +1,1 @@
+web: bin/qgtunnel bundle exec unicorn -p 0.0.0.0:\8080 -c ./config/unicorn.rb
