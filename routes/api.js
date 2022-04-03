@@ -1,14 +1,37 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Database = 'portpolio';
 const { C, M } = require('../models/database');
 const { Schemas } = require('../models/schemas');
+const { secretKey } = require('../config');
 
 router.use('/*', async (req, res, next) => {
 	let token = req.headers.authorization || req.query.token;
 	if (!token) return res.status(401).send('No token provided');
+
+	// // verify token
+	let decoded = {};
+	// try {
+	// 	decoded = await new Promise((resolve, reject) => {
+	// 		jwt.verify(token, secretKey, (err, decoded) => {
+	// 			if (err) return reject('Failed to authenticate token');
+	// 			resolve(decoded);
+	// 		});
+	// 	});
+	// } catch (error) {
+	// 	return res.status(401).send(error);
+	// }
+
+	// // get application and user
+	let { account = {}, expiration = '1h' } = decoded,
+		user = {};
+
+	// // generate token
+	const newToken = jwt.sign({ account }, secretKey, { expiresIn: expiration });
 	req.query.newToken = newToken;
 	res.set('Authorization', newToken);
+	res.send(newToken);
 	next();
 });
 
