@@ -5,6 +5,8 @@ const Database = 'portpolio';
 const { C, M } = require('../models/database');
 const { Schemas } = require('../models/schemas');
 const { secretKey } = require('../config');
+const multer = require('multer');
+const getData = require('../function/getData');
 
 router.use('/*', async (req, res, next) => {
 	let token = req.headers.authorization || req.query.token;
@@ -31,7 +33,6 @@ router.use('/*', async (req, res, next) => {
 	const newToken = jwt.sign({ account }, secretKey, { expiresIn: expiration });
 	req.query.newToken = newToken;
 	res.set('Authorization', newToken);
-	res.send(newToken);
 	next();
 });
 
@@ -39,9 +40,53 @@ router.get('/', (req, res, next) => {
 	res.send('API');
 });
 
+const upload = multer({
+	limits: { fieldNameSize: 999999999, fieldSize: 999999999 }
+	// storage: multerS3({
+	// 	s3: awsS3,
+	// 	bucket: 'images.aha.volenday.com',
+	// 	acl: 'public-read',
+	// 	cacheControl: 'max-age=2592000',
+	// 	contentType: (req, file, cb) => {
+	// 		const typeFromPlugin = mime.getType(file.originalname);
+	// 		const type = file.mimetype ? file.mimetype : typeFromPlugin ? typeFromPlugin : 'application/octet-stream';
+	// 		cb(null, type);
+	// 	},
+	// 	key: (req, file, cb) => {
+	// 		const { EntityId } = req.params;
+	// 		const { application, schemasById } = req.query;
+	// 		const { mimetype, originalname: fileName } = file;
+
+	// 		const schema = { ...schemasById[EntityId] };
+
+	// 		let newFileName = '';
+	// 		if (fileName.includes('.')) {
+	// 			const splittedFileName = fileName.split('.'),
+	// 				extension = splittedFileName.pop(),
+	// 				fileNameWithoutExtension = splittedFileName.join('.').replace(/[^\w]/gi, '-');
+
+	// 			newFileName = fileNameWithoutExtension + '-' + v1() + '.' + extension;
+	// 			cb(null, `${environment}/applications/${application.Id}/images/${schema.UniqueId}/${newFileName}`);
+	// 		} else {
+	// 			const extension = mime.getExtension(mimetype);
+	// 			if (mimetype == 'application/octet-stream' || !extension) {
+	// 				newFileName = fileName + '-' + v1();
+	// 			} else {
+	// 				newFileName = fileName + '-' + v1() + '.' + extension;
+	// 			}
+	// 		}
+
+	// 		cb(null, `${environment}/applications/${application.Id}/images/${schema.UniqueId}/${newFileName}`);
+	// 	}
+	// })
+});
+
 // insert
-router.post('/e/:EntityId', async (req, res, next) => {
+router.post('/e/:EntityId', upload.any(), async (req, res, next) => {
 	const { EntityId } = req.params;
+	console.log(req.headers);
+	console.log('req.body', req.body);
+	console.log('=========================='.res);
 	let fields = { ...req.body },
 		files = req.files ? [...req.files] : [];
 	const schemas = Schemas[EntityId];
@@ -54,34 +99,99 @@ router.post('/e/:EntityId', async (req, res, next) => {
 		});
 		res.status(200).send({ message: 'Successfully Added', content: insertedId });
 	} catch (error) {
-		console.log('error', error);
-		res.status(412).send({
-			status: error,
-			message: 'Creating data error'
-		});
+		console.log('error', error.message);
+		res.status(412).send(error.message);
 	}
 });
 
-// retrieve
-router.get('/e/:EntityId', async (req, res) => {
+const getAll = async (req, res) => {
 	const { EntityId } = req.params;
-	const schemas = Schemas[EntityId];
+	const { application, schemas, schemasById } = req.query;
+
+	let {
+		all,
+		access,
+		account,
+		autoPopulate,
+		cacheExpiration = null,
+		cacheKey = null,
+		count,
+		fields,
+		filter,
+		ids,
+		keywords,
+		limit,
+		offset,
+		page,
+		populate,
+		sortBy
+	} = req.method === 'GET' ? req.query : req.body;
+
+	const schema = Schemas[EntityId];
+
+	if (!schema) return res.status(412).send('Something went wrong, looks like entity schema is not found');
+
 	try {
-		const data = await new Promise((resolve, reject) => {
-			M(C(Database), EntityId, schemas).find((err, data) => {
-				if (err) return reject(err);
-				resolve(data);
-			});
+		const response = await getData({
+			all,
+			autoPopulate,
+			count,
+			database: Database,
+			entityId: EntityId,
+			// entityUniqueId: schema.UniqueId,
+			fields,
+			// fileFolder: application.Id,
+			filter,
+			ids,
+			keywords,
+			limit,
+			offset,
+			page,
+			populate,
+			schema: schema,
+			// schemas,
+			sortBy
 		});
-		res.status(200).send({ data });
+
+		if (cacheKey) {
+			const shouldInsertToCache =
+				response.data.length !== 0
+					? Object.keys(response.data[0]).length === 3 &&
+					  Object.keys(response.data[0]).includes('Id') &&
+					  Object.keys(response.data[0]).includes('DateCreated') &&
+					  Object.keys(response.data[0]).includes('DateUpdated')
+						? false
+						: true
+					: true;
+			if (shouldInsertToCache) client.set(cacheKey, JSON.stringify(response), 'EX', cacheExpiration);
+		}
+
+		res.status(200).send(response);
 	} catch (error) {
-		console.log('error', error);
-		res.status(412).send({
-			status: error,
-			message: 'Fetching data error'
-		});
+		console.log(error);
+		res.status(412).send({ message: 'Something went wrong.', error: error.message });
 	}
-});
+};
+
+// retrieve
+router.get('/e/:EntityId', getAll);
+// // // retrieve
+// router.get('/e/:EntityId', async (req, res) => {
+// 	const { EntityId } = req.params;
+// 	const schemas = Schemas[EntityId];
+// 	try {
+// 		const data = await new Promise((resolve, reject) => {
+// 			M(C(Database), EntityId, schemas).find((err, data) => {
+// 				if (err) return reject(err);
+// 				resolve(data);
+// 			});
+// 		});
+// 		res.status(200).send({ data });
+// 	} catch (error) {
+// 		console.log('error', error);
+// 		res.status(412).send(error.message);
+// 	}
+// });
 
 // getData by id
 router.get('/e/:EntityId/:id', async (req, res) => {
@@ -97,10 +207,7 @@ router.get('/e/:EntityId/:id', async (req, res) => {
 		res.status(200).send({ data });
 	} catch (error) {
 		console.log('error', error);
-		res.status(412).send({
-			status: error,
-			message: 'Fetching data error'
-		});
+		res.status(412).send(error.message);
 	}
 });
 
@@ -129,10 +236,7 @@ router.put('/e/:EntityId/:id', async (req, res) => {
 		res.status(200).send({ message: 'Successfully updated', data });
 	} catch (error) {
 		console.log('error', error);
-		res.status(412).send({
-			status: error,
-			message: 'Updating error'
-		});
+		res.status(412).send(error.message);
 	}
 });
 
@@ -150,10 +254,7 @@ router.delete('/e/:EntityId/:id', async (req, res) => {
 		res.status(200).send({ message: 'Successfully deleted', data });
 	} catch (error) {
 		console.log('error', error);
-		res.status(412).send({
-			status: error,
-			message: 'Deletion error'
-		});
+		res.status(412).send(error.message);
 	}
 });
 

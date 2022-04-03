@@ -19,6 +19,19 @@ app.use(cors());
 app.use(logger('dev'));
 app.use(express.urlencoded({ extended: true, parameterLimit: 10000, limit: 1024 * 1024 * 50 }));
 
+// headers to read FormData
+app.use((req, res, next) => {
+	req.header('Access-Control-Allow-Origin', '*');
+	req.header('Access-Control-Allow-Headers', 'X-Requested-With');
+	req.header('Access-Control-Allow-Headers', 'Content-Type');
+	req.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+	res.header('Access-Control-Allow-Origin', '*');
+	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+	res.header('Access-Control-Allow-Headers', 'Content-Type');
+	res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+	next();
+});
+
 // routes
 app.use('/', require('./routes/index'));
 const usersRoutes = require('./routes/Users');
