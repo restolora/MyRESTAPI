@@ -84,12 +84,10 @@ const upload = multer({
 // insert
 router.post('/e/:EntityId', upload.any(), async (req, res, next) => {
 	const { EntityId } = req.params;
-	console.log(req.headers);
-	console.log('req.body', req.body);
-	console.log('=========================='.res);
 	let fields = { ...req.body },
 		files = req.files ? [...req.files] : [];
 	const schemas = Schemas[EntityId];
+
 	try {
 		const insertedId = await new Promise((resolve, reject) => {
 			M(C(Database), EntityId, schemas).create(fields, (err, inserted) => {
@@ -97,7 +95,7 @@ router.post('/e/:EntityId', upload.any(), async (req, res, next) => {
 				resolve(inserted);
 			});
 		});
-		res.status(200).send({ message: 'Successfully Added', content: insertedId });
+		res.status(200).send({ message: 'Successfully Added', data: insertedId });
 	} catch (error) {
 		console.log('error', error.message);
 		res.status(412).send(error.message);
@@ -176,6 +174,7 @@ const getAll = async (req, res) => {
 // retrieve
 router.get('/e/:EntityId', getAll);
 // // // retrieve
+
 // router.get('/e/:EntityId', async (req, res) => {
 // 	const { EntityId } = req.params;
 // 	const schemas = Schemas[EntityId];
@@ -212,17 +211,16 @@ router.get('/e/:EntityId/:id', async (req, res) => {
 });
 
 // update
-router.put('/e/:EntityId/:id', async (req, res) => {
+router.put('/e/:EntityId/:id', upload.any(), async (req, res) => {
 	const { EntityId, id } = req.params;
 	let fields = { ...req.body };
-	console.log(fields);
-	const schemas = Schemas[EntityId];
+	const schema = Schemas[EntityId];
 	try {
-		let data = await M(C(Database), EntityId, schemas).findById(id).exec();
+		let data = await M(C(Database), EntityId, schema).findById(id).exec();
 		if (!data) res.status(412).send({ message: 'Updating failed, data is not found', data: {} });
 
 		await new Promise((resolve, reject) => {
-			M(C(Database), EntityId, schemas).findOneAndUpdate(
+			M(C(Database), EntityId, schema).findOneAndUpdate(
 				{ _id: id },
 				{ $set: fields },
 				{ runValidators: true, context: 'query' },
@@ -233,7 +231,14 @@ router.put('/e/:EntityId/:id', async (req, res) => {
 			);
 		});
 
-		res.status(200).send({ message: 'Successfully updated', data });
+		const response = await getData({
+			database: Database,
+			entityId: EntityId,
+			ids: [id],
+			schema
+		});
+
+		res.status(200).send({ message: 'Successfully updated', data: response.data[0] });
 	} catch (error) {
 		console.log('error', error);
 		res.status(412).send(error.message);

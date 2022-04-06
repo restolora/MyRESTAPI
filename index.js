@@ -9,8 +9,21 @@ const { mongoConnectionString } = require('./config');
 const mongoose = require('mongoose');
 const app = express();
 const path = require('path');
-// var server = http.createServer(app);
-// const io = socketIO(server);
+var server = http.createServer(app);
+const io = socketIO(server);
+
+io.on('connection', socket => {
+	console.log('we have a new connection!');
+
+	socket.on('test', ({ name }) => {
+		console.log(name);
+	});
+
+	socket.on('disconnect', () => {
+		console.log('User had left!');
+	});
+});
+
 // io.adapter(mongoAdapter(`${mongoConnectionString.cluster}`));
 
 // middlewares
@@ -21,10 +34,6 @@ app.use(express.urlencoded({ extended: true, parameterLimit: 10000, limit: 1024 
 
 // headers to read FormData
 app.use((req, res, next) => {
-	req.header('Access-Control-Allow-Origin', '*');
-	req.header('Access-Control-Allow-Headers', 'X-Requested-With');
-	req.header('Access-Control-Allow-Headers', 'Content-Type');
-	req.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
 	res.header('Access-Control-Allow-Origin', '*');
 	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
 	res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -50,10 +59,13 @@ mongoose.connect(
 	},
 	err => (err ? console.log('Connection error', err) : console.log('connected'))
 );
-// api
-const port = process.env.PORT || 8080;
+
+// for deployment purposes
 // app.use(express.static(path.join(__dirname, '/client')));
 // app.get('*', (req, res) => {
 // 	req.sendFile(path.resolve(__dirname, '/client/build', 'index.html'));
 // });
+
+// api
+const port = process.env.PORT || 8080;
 app.listen(port, () => console.log('Express server is running at port', port));
